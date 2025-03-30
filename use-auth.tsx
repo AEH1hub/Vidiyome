@@ -1,12 +1,8 @@
 import { createContext, ReactNode, useContext } from "react";
-import {
-  useQuery,
-  useMutation,
-  UseMutationResult,
-} from "@tanstack/react-query";
-import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, UseMutationResult } from "react-query";
+import { toast } from "./use-toast";
+import { apiRequest, queryClient } from "./api";
+import { InsertUser, SelectUser } from "./schema";
 
 type AuthContextType = {
   user: SelectUser | null;
@@ -20,38 +16,38 @@ type AuthContextType = {
 type LoginData = Pick<InsertUser, "username" | "password">;
 
 export const AuthContext = createContext<AuthContextType | null>(null);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { toast } = useToast();
   const {
     data: user,
     error,
     isLoading,
   } = useQuery<SelectUser | null>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: () => apiRequest({ method: "GET", url: "/api/user" }).then((res) => res.json()),
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const response = await apiRequest({
-        method: "POST", 
-        url: "/api/login", 
-        body: credentials
-      }, true);
-      return await response.json();
+        method: "POST",
+        url: "/api/login",
+        body: credentials,
+      });
+      return response.json();
     },
     onSuccess: (data) => {
       if (data.success) {
         queryClient.setQueryData(["/api/user"], data.user);
         toast({
           title: "Login successful",
-          description: "Welcome back to VIDIYOME"
+          description: "Welcome back to VIDIYOME",
         });
       } else {
         toast({
           title: "Login failed",
           description: data.message || "Invalid username or password",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     },
@@ -59,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Login failed",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     },
   });
@@ -67,24 +63,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
       const response = await apiRequest({
-        method: "POST", 
-        url: "/api/register", 
-        body: credentials
-      }, true);
-      return await response.json();
+        method: "POST",
+        url: "/api/register",
+        body: credentials,
+      });
+      return response.json();
     },
     onSuccess: (data) => {
       if (data.success) {
         queryClient.setQueryData(["/api/user"], data.user);
         toast({
           title: "Registration successful",
-          description: "Your account has been created"
+          description: "Your account has been created",
         });
       } else {
         toast({
           title: "Registration failed",
           description: data.message || "Username already exists",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     },
@@ -92,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Registration failed",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     },
   });
@@ -100,23 +96,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest({
-        method: "POST", 
-        url: "/api/logout"
-      }, true);
-      return await response.json();
+        method: "POST",
+        url: "/api/logout",
+      });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Logged out",
-        description: "You have been successfully logged out"
+        description: "You have been successfully logged out",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Logout failed",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     },
   });
